@@ -2,7 +2,9 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import psycopg2
 from datetime import datetime
-
+from quickchart import QuickChart
+import json
+from urllib.parse import urlencode
 
 app = FastAPI()
 
@@ -11,13 +13,14 @@ db_params = {
     'dbname': 'SmartStrideDB',
     'user': 'hirakdesai',
     'host': 'localhost',
-    'password': '',
+    'password': 'rexes',
 }
 
 
 @app.post("/insert_run_data/")
 async def insert_run_data(input_string: str):
     try:
+        print(input_string)
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
         data_dict['time'] = datetime.now()
         print(data_dict)
@@ -89,6 +92,51 @@ async def signup(input_string: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
+# endpoint to signup userdata
+@app.post("/signup_userdata/")
+async def signup_userdata(input_string: str):
+    try:
+        # form data dict for 3 values uid, name, age
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        print(data_dict)
+    
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+
+        # add to userData where userName = data_dict['userName'] : fullName, dob, height, weight, med, gender, blood
+        sql = """
+        UPDATE userData
+        SET fullName = %s, dob = %s, height = %s, weight = %s, med = %s, gender = %s, blood = %s
+        WHERE userName = %s
+        """
+
+        # Extract data from data_dict
+        user_data = (
+            data_dict['fullName'],
+            data_dict['dob'],
+            data_dict['height'],
+            data_dict['weight'],
+            data_dict['med'],
+            data_dict['gender'],
+            data_dict['blood'],
+            data_dict['userName']
+        )
+
+        # Execute the query
+        cursor.execute(sql, user_data)
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"User with uid {data_dict['uid']} signed up successfully")
+        return {"message": "User data signed up successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 # endpoint to login a user
 @app.post("/login/")
 async def login(input_string: str):
@@ -135,6 +183,77 @@ def get_quote():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
+def get_day_2_goal_chart():
+    try:
+        # # Connect to the PostgreSQL database
+        # conn = psycopg2.connect(**db_params)
+        # cursor = conn.cursor()
+        # if not cursor:
+        #     raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # # get all data from runData
+        # cursor.execute("SELECT * FROM runData WHERE uid = 123")
+        # data = cursor.fetchall()
+        # cursor.close()
+        # conn.close()
+
+        # # convert data to a list with sublists only keep speed and inclination values and add an index
+        # data = [[i, row[2], row[3]] for i, row in enumerate(data)]
+
+        # # return data as json
+        config = {
+            "type": 'radialGauge',
+            "data": {
+                "datasets": [{
+                "data": [80],
+                "backgroundColor": "orange",
+                }]
+            },
+            "options": {
+                "domain": [0, 100],
+                "trackColor": '#f0f8ff', 
+                "centerPercentage": 90,
+                "centerArea": {
+                "text": '80%',
+                },
+            }
+            }
+        params = {
+            'chart': json.dumps(config),
+            'width': 500,
+            'height': 300,
+            'format': 'png',
+        }
+
+        return f"https://quickchart.io/chart?{urlencode(params)}"
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+def get_month_overview_chart():
+    try:
+        config = {
+            "type": "bar",
+            "data": {
+                "labels": ["Hello world", "Test"],
+                "datasets": [{
+                    "label": "Foo",
+                    "data": [1, 2]
+                }]
+            }
+        }
+
+        params = {
+            'chart': json.dumps(config),
+            'width': 500,
+            'height': 300,
+            'backgroundColor': 'white',
+        }
+        return f"https://quickchart.io/chart?{urlencode(params)}"
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 # endpoint for dashboard
 @app.post("/dashboard/")
 async def dashboard(input_string: str):
@@ -146,13 +265,17 @@ async def dashboard(input_string: str):
         if not cursor:
             raise HTTPException(status_code=500, detail="Could not connect to the database")
         cursor.execute("SELECT * FROM userDB WHERE userName = %s", (data_dict['userName'],))
-        data = cursor.fetchall()
+        userdb_data = cursor.fetchall()
+        print(userdb_data)
         cursor.close()
         conn.close()
         
         quote = get_quote()
+        pie_chart_url = get_day_2_goal_chart()
+        bar_chart_url = get_month_overview_chart()
         # return data as json
-        data = {"quote": quote}
+        data = {"quote": quote, "pie_chart_url": pie_chart_url, "bar_chart_url": bar_chart_url}
+        print(data)
         return data
 
     except Exception as e:
