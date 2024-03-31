@@ -4,7 +4,9 @@ import psycopg2
 from datetime import datetime
 from quickchart import QuickChart
 import json
+from datetime import datetime, timedelta
 from urllib.parse import urlencode
+import pandas as pd
 
 app = FastAPI()
 
@@ -71,7 +73,6 @@ async def signup(input_string: str):
     try:
         # form data dict for 3 values userName, email, password
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
-        print(data_dict)
     
         # Connect to the PostgreSQL database
         conn = psycopg2.connect(**db_params)
@@ -84,6 +85,49 @@ async def signup(input_string: str):
                        (data_dict['userName'], data_dict['email'], data_dict['password']))
 
         conn.commit()
+
+
+        try:
+            # SQL query to create the table
+            create_table_query = f'''
+            CREATE TABLE IF NOT EXISTS {data_dict['userName']}RunDB (
+                runcount INT,
+                time VARCHAR(50),
+                speed DECIMAL(5,2),
+                inclination INT
+            )
+            '''
+            
+            # Executing the SQL query to create the table
+            cursor.execute(create_table_query)
+
+            # Committing the changes
+            conn.commit()
+
+            create_table_query = f'''
+            CREATE TABLE IF NOT EXISTS {data_dict['userName']}RunStatsDB (
+                runcountid INT,
+                datetime VARCHAR(50),
+                duration VARCHAR(50),
+                currentweight DECIMAL(5,2),
+                distance DECIMAL(8,2),
+                volume DECIMAL(8,2)
+            )
+        '''
+
+            
+            # Executing the SQL query to create the table
+            cursor.execute(create_table_query)
+
+            # Committing the changes
+            conn.commit()
+
+        except psycopg2.Error as e:
+            if isinstance(e, errors.DuplicateTable):
+                print("Table already exists!")
+            else:
+                print("Error:", e)
+
         cursor.close()
         conn.close()
         print(f"User {data_dict['userName']} signed up successfully")
@@ -211,7 +255,6 @@ def get_day_2_goal_chart():
         }
 
         return f"https://quickchart.io/chart?{urlencode(params)}"
-
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
@@ -305,6 +348,188 @@ async def update_user_data(input_string: str):
         print("error is in update_user_data")
         print(e)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+# endpoint to get user goal and put in goals table
+@app.post("/set_goal/")
+async def set_goal(input_string: str):
+    try:
+        # form data dict for 3 values userName, program, goal, days
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        # adding data_dict['days'] to todays date to get targetdate
+        # give just date in string format
+        data_dict['targetdate'] = (datetime.now() + timedelta(days=int(data_dict['days']))).strftime('%Y-%m-%d')
+    
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+
+        # add to userData where userName = data_dict['userName'] : fullName, dob, height, weight
+        sql = """
+        INSERT INTO goals (username, program, targetdate, goal)
+        VALUES (%s, %s, %s, %s)
+        """
+
+        # Extract data from data_dict
+        user_data = (
+            data_dict['userName'],
+            data_dict['program'],
+            data_dict['targetdate'],
+            data_dict['goal']
+        )
+
+        # Execute the query
+        cursor.execute(sql, user_data)
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "User goal set successfully"}
+
+    except Exception as e:
+        print("error is in set_goal")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+# endpoint to get user goal
+@app.post("/get_user_goal/")
+async def get_user_goal(input_string: str):
+    try:
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        # get user data from userDB for data_dict['userName']
+        print(data_dict)
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # check if user has a goal
+        cursor.execute("SELECT * FROM goals WHERE username = %s", (data_dict['userName'],))
+        userdb_data = cursor.fetchall()
+        if len(userdb_data) == 0:
+            userdb_data = {"isAvailable": 404}
+
+        # convert userdb_data to a dictionary
+        userdb_data = {cursor.description[i][0]: userdb_data[0][i] for i in range(len(cursor.description))}
+
+        # convert userdb_data['targetdate'] to datetime object
+        userdb_data['targetdate'] = datetime.strptime(userdb_data['targetdate'], '%Y-%m-%d')
+        # userdb_data['targetdate'] = int days to targetdate
+        userdb_data['targetdate'] = (userdb_data['targetdate'] - datetime.now()).days
+
+        userdb_data['isAvailable'] = 200
+
+        if userdb_data['program'] == 'Weight Loss':
+            userdb_data['goal'] = f"Loose {userdb_data['goal']} kg"
+        else:
+            userdb_data['goal'] = f"Run {userdb_data['goal']} km"
+        cursor.close()
+        conn.close()
+        return userdb_data
+
+    except Exception as e:
+        print("error is in get_user_goal")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+    
+
+
+def generate_run_graph(df: pd.DataFrame):
+    try:
+        df['speed'] = df['speed'].astype(float)
+        df['inclination'] = df['inclination'].astype(float)
+
+        # df keeps only every 3rd row
+        df = df.iloc[::3, :]
+        
+        qc = QuickChart()
+        qc.config = {
+        "type": "line",
+        "data": {
+            "labels": df['datetime'].dt.strftime('%H:%M:%S').tolist(),
+            "datasets": [
+            {
+                "label": "Inclination",
+                "backgroundColor": "rgb(255, 99, 132)",
+                "borderColor": "rgb(255, 99, 132)",
+                "data": df['inclination'].tolist(),
+                "fill": 'false'
+            },
+            {
+                "label": "Speed",
+                "fill": 'false',
+                "backgroundColor": "rgb(54, 162, 235)",
+                "borderColor": "rgb(54, 162, 235)",
+                "data": df['speed'].tolist()
+            }
+            ]
+        },
+        "options": {
+        }
+        }
+        short_url = qc.get_short_url()
+        print(short_url)
+        return short_url
+        
+    except Exception as e:
+        print("error is in generate_run_graph")
+        print(e)
+        return ""
+
+def get_history_data(username, date):
+    try:
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {username}RunDB")
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Extracting column names from the cursor description
+        column_names = [desc[0] for desc in cursor.description]
+
+        # Creating a pandas DataFrame
+        df = pd.DataFrame(data, columns=column_names)
+
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        unique_dates_list = df['datetime'].dt.strftime('%Y/%m/%d').unique()
+        unique_dates_str = ','.join(unique_dates_list)
+
+        if date == "last":
+            date = unique_dates_list[-1]
+
+        short_df = df[df['datetime'].dt.strftime('%Y/%m/%d') == date]
+
+        url = generate_run_graph(short_df)
+
+        
+        return {"unique_dates": unique_dates_str, "graph_url": url}
+    
+    except Exception as e:
+        print("error is in get_history_data")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+# endpoint for histroy page
+@app.post("/history/")
+async def history(input_string: str):
+    try:
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        print(data_dict)
+        data = get_history_data(data_dict['userName'], data_dict['date'])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
 
     
 # endpoint for dashboard
