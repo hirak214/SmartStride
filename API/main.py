@@ -111,7 +111,8 @@ async def signup(input_string: str):
                 duration VARCHAR(50),
                 currentweight DECIMAL(5,2),
                 distance DECIMAL(8,2),
-                volume DECIMAL(8,2)
+                volume DECIMAL(8,2),
+                graphurl VARCHAR(255)
             )
         '''
 
@@ -211,6 +212,7 @@ async def login(input_string: str):
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
+
 def get_quote():
     try:
         # Connect to the PostgreSQL database
@@ -228,22 +230,52 @@ def get_quote():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-def get_day_2_goal_chart():
+# function to get days into the goal
+def get_days_into_goal(username):
+    # get the targetdate from goals where username = username
+    # get the startdate from goals where username = username
+    # get the current date
+    # return days into goal, difference between startdate and targetdate
+    try:
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        cursor.execute("SELECT * FROM goals WHERE username = %s", (username,))
+        data = cursor.fetchall()
+        if len(data) == 0:
+            return 0
+        targetdate = data[0][3]
+        startdate = data[0][4]
+        cursor.close()
+        conn.close()
+        total_days = (datetime.strptime(targetdate, '%Y-%m-%d') - datetime.strptime(startdate, '%Y-%m-%d')).days
+        days_into_goal = (datetime.now() - datetime.strptime(startdate, '%Y-%m-%d')).days
+        return days_into_goal, total_days
+    
+    except Exception as e:
+        print("error is in get_days_into_goal")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+def get_day_2_goal_chart(days_into_goal, total_days):
+    days_into_goal = int(days_into_goal) + 1
     try:
         config = {
             "type": 'radialGauge',
             "data": {
                 "datasets": [{
-                "data": [80],
+                "data": [days_into_goal],
                 "backgroundColor": "orange",
                 }]
             },
             "options": {
-                "domain": [0, 100],
+                "domain": [0, total_days],
                 "trackColor": '#f0f8ff', 
                 "centerPercentage": 90,
                 "centerArea": {
-                "text": '80%',
+                "text": f'{days_into_goal}/{total_days}',
                 },
             }
             }
@@ -359,6 +391,7 @@ async def set_goal(input_string: str):
         # adding data_dict['days'] to todays date to get targetdate
         # give just date in string format
         data_dict['targetdate'] = (datetime.now() + timedelta(days=int(data_dict['days']))).strftime('%Y-%m-%d')
+        data_dict['startdate'] = datetime.now().strftime('%Y-%m-%d')
     
         # Connect to the PostgreSQL database
         conn = psycopg2.connect(**db_params)
@@ -368,16 +401,17 @@ async def set_goal(input_string: str):
 
         # add to userData where userName = data_dict['userName'] : fullName, dob, height, weight
         sql = """
-        INSERT INTO goals (username, program, targetdate, goal)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO goals (username, program, goal, targetdate, startdate)
+        VALUES (%s, %s, %s, %s, %s)
         """
 
         # Extract data from data_dict
         user_data = (
             data_dict['userName'],
             data_dict['program'],
+            data_dict['goal'],
             data_dict['targetdate'],
-            data_dict['goal']
+            data_dict['startdate']
         )
 
         # Execute the query
@@ -442,13 +476,13 @@ def generate_run_graph(df: pd.DataFrame):
         df['inclination'] = df['inclination'].astype(float)
 
         # df keeps only every 3rd row
-        df = df.iloc[::3, :]
+        df = df.iloc[::4, :]
         
         qc = QuickChart()
         qc.config = {
         "type": "line",
         "data": {
-            "labels": df['datetime'].dt.strftime('%H:%M:%S').tolist(),
+            "labels": df['time'].dt.strftime('%H:%M:%S').tolist(),
             "datasets": [
             {
                 "label": "Inclination",
@@ -470,15 +504,80 @@ def generate_run_graph(df: pd.DataFrame):
         }
         }
         short_url = qc.get_short_url()
-        print(short_url)
         return short_url
         
     except Exception as e:
         print("error is in generate_run_graph")
-        print(e)
         return ""
 
-def get_history_data(username, date):
+def get_history_day_chart(username, date):
+    # check f"{username}runstatsdb" for graphurl for that date
+    # if not generate from f"{username}rundb"abs
+    try:
+        if date == 'last':
+            # get the last date from {username}RunDB
+            conn = psycopg2.connect(**db_params)
+            cursor = conn.cursor()
+            if not cursor:
+                raise HTTPException(status_code=500, detail="Could not connect to the database")
+            cursor.execute(f"SELECT * FROM {username}RunDB ORDER BY time DESC LIMIT 1")
+            data = cursor.fetchall()
+            date_string = data[0][1]
+            date = datetime.strptime(date_string, '%Y/%m/%d %H:%M:%S').strftime('%Y/%m/%d')
+
+            cursor.close()
+            conn.close()
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {username}RunStatsDB WHERE datetime = %s", (date,))
+        data = cursor.fetchall()
+        if len(data) == 0 or data[0][6] == None:
+            cursor.execute(f"SELECT * FROM {username}RunDB WHERE time::date = %s", (date,))
+            data = cursor.fetchall()
+            column_names = [desc[0] for desc in cursor.description]
+            df = pd.DataFrame(data, columns=column_names)
+            df['time'] = pd.to_datetime(df['time'])
+            short_url = generate_run_graph(df)
+            # insert short_url in {username}RunStatsDB with datetime = date
+            # cursor.execute(f"INSERT INTO {username}RunStatsDB (runcountid, datetime, duration, currentweight, distance, volume, graphurl) VALUES (%s, %s, %s, %s, %s, %s, %s)", (1, date, '00:00:00', 0, 0, 0, short_url))
+            cursor.execute(f"UPDATE {username}RunStatsDB SET graphurl = %s WHERE datetime = %s", (short_url, date))
+            conn.commit()
+        else:
+            print("getting from db")
+            short_url = data[0][6]
+        cursor.close()
+        conn.close()
+        return short_url
+    
+    except Exception as e:
+        print("error is in get_history_day_chart")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+def get_run_stats(username, date):
+    try:
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {username}RunStatsDB WHERE datetime = %s", (date,))
+        data = cursor.fetchall()
+        if len(data) == 0:
+            return 0, 0, 0
+        else:
+            return data[0][4], data[0][5], data[0][2]
+    except Exception as e:
+        print("error is in get_run_stats")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+def get_unique_dates(username, date):
     try:
         # Connect to the PostgreSQL database
         conn = psycopg2.connect(**db_params)
@@ -496,24 +595,60 @@ def get_history_data(username, date):
 
         # Creating a pandas DataFrame
         df = pd.DataFrame(data, columns=column_names)
-
-        df['datetime'] = pd.to_datetime(df['datetime'])
-
-        unique_dates_list = df['datetime'].dt.strftime('%Y/%m/%d').unique()
+        df['time'] = pd.to_datetime(df['time'])
+        unique_dates_list = df['time'].dt.strftime('%Y/%m/%d').unique()
         unique_dates_str = ','.join(unique_dates_list)
-
-        if date == "last":
-            date = unique_dates_list[-1]
-
-        short_df = df[df['datetime'].dt.strftime('%Y/%m/%d') == date]
-
-        url = generate_run_graph(short_df)
-
         
-        return {"unique_dates": unique_dates_str, "graph_url": url}
-    
+        return unique_dates_str
+
     except Exception as e:
-        print("error is in get_history_data")
+        print("error is in get_unique_dates")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+# endpoint to compute volume of run, distance, duration for usernamerunstatsdb
+# endpoint to compute volume of run, distance, duration for usernamerunstatsdb
+@app.post("/compute_run_stats/")
+async def compute_run_stats(input_string: str):
+    try:
+        # form data dict for 3 values userName, program, goal, days
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        print(data_dict)
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {data_dict['userName']}RunDB")
+        data = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(data, columns=column_names)
+        df['time'] = pd.to_datetime(df['time'], format='%Y/%m/%d %H:%M:%S')
+
+
+        # Compute duration, volume, and distance for each run separately
+        run_stats = []
+
+        for runcount, group_df in df.groupby('runcount'):
+            duration = (group_df['time'].max() - group_df['time'].min()).total_seconds()
+            volume = ((group_df['speed'].astype(float) * group_df['inclination'].astype(float) * duration).sum())/1000
+            distance = ((group_df['speed'].astype(float) * duration).sum())/1000000
+            date = group_df['time'].min().strftime('%Y/%m/%d')
+            run_stats.append({'runcount': runcount, 'duration': duration, 'volume': volume, 'distance': distance, 'datetime': date})
+
+        # Insert computed values into {data_dict['userName']}RunStatsDB
+        for stats in run_stats:
+            print(stats)
+            cursor.execute(f"INSERT INTO {data_dict['userName']}RunStatsDB (runcountid, datetime, duration, currentweight, distance, volume) VALUES (%s, %s, %s, %s, %s, %s)",
+                           (stats['runcount'], stats['datetime'], stats['duration'], 0, stats['distance'], stats['volume']))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"message": "Run stats computed successfully"}
+
+    except Exception as e:
+        print("error is in compute_run_stats")
         print(e)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
@@ -523,15 +658,76 @@ def get_history_data(username, date):
 async def history(input_string: str):
     try:
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
-        print(data_dict)
-        data = get_history_data(data_dict['userName'], data_dict['date'])
-        return data
+        unique_dates = get_unique_dates(data_dict['userName'], data_dict['date'])
+        graph_url = get_history_day_chart(data_dict['userName'], data_dict['date'])
+        distance, volume, duration = get_run_stats(data_dict['userName'], data_dict['date'])
+        duration = round(float(duration)/60, 2)
+
+
+
+        return {"unique_dates": unique_dates, "graph_url": graph_url, "volume": str(volume), "distance": str(f"{distance} kms"), "duration": str(f"{duration} mins"), "selected_date": str(data_dict['date'])}
     except Exception as e:
+        print("error is in history")
+        print(e)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
+# endpoint for runnow page
+@app.post("/runnow/")
+async def runnow(input_string: str):
+    try:
+        data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        # get user data from userDB for data_dict['userName']
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        cursor.execute("SELECT * FROM userDB WHERE userName = %s", (data_dict['userName'],))
+        userdb_data = cursor.fetchall()
+        print(userdb_data)
+        cursor.close()
+        conn.close()
+        return {"message": "User data signed up successfully"}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     
+def get_best_run(username):
+    try:
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {username}RunStatsDB ORDER BY volume DESC LIMIT 1")
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return data[0][1]
+    except Exception as e:
+        print("error is in get_best_run")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+def get_last_run(username):
+    try:
+        # Connect to the PostgreSQL database
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        # get all data from runData
+        cursor.execute(f"SELECT * FROM {username}RunStatsDB ORDER BY datetime DESC LIMIT 1")
+        data = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return data[0][1]
+    except Exception as e:
+        print("error is in get_last_run")
+        print(e)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 # endpoint for dashboard
 @app.post("/dashboard/")
 async def dashboard(input_string: str):
@@ -549,10 +745,14 @@ async def dashboard(input_string: str):
         conn.close()
         
         quote = get_quote()
-        pie_chart_url = get_day_2_goal_chart()
+        days_into_goal, total_days = get_days_into_goal(data_dict['userName'])
+        pie_chart_url = get_day_2_goal_chart(days_into_goal=days_into_goal, total_days=total_days)
         bar_chart_url = get_month_overview_chart()
+        best_run = get_best_run(data_dict['userName'])
+        last_run = get_last_run(data_dict['userName'])
+
         # return data as json
-        data = {"quote": quote, "pie_chart_url": pie_chart_url, "bar_chart_url": bar_chart_url}
+        data = {"quote": quote, "pie_chart_url": pie_chart_url, "bar_chart_url": bar_chart_url, "best_run": best_run, "last_run": last_run}
         print(data)
         return data
 
