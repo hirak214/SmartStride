@@ -267,7 +267,8 @@ def get_day_2_goal_chart(days_into_goal, total_days):
             "data": {
                 "datasets": [{
                 "data": [days_into_goal],
-                "backgroundColor": "orange",
+                "backgroundColor": "rgba(244, 113, 33)",
+                "borderWidth": 0
                 }]
             },
             "options": {
@@ -291,29 +292,62 @@ def get_day_2_goal_chart(days_into_goal, total_days):
         print(e)
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-def get_month_overview_chart():
+
+def get_month_overview_chart(username):
     try:
+        # Load usernameRunStatsDB as df
+        conn = psycopg2.connect(**db_params)
+        cursor = conn.cursor()
+        if not cursor:
+            raise HTTPException(status_code=500, detail="Could not connect to the database")
+        cursor.execute(f"SELECT * FROM {username}RunStatsDB")
+        data = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        df = pd.DataFrame(data, columns=column_names)
+        
+        # Convert datetime column to datetime type
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        # sort df by datetime
+        df = df.sort_values(by='datetime')
+
+        # crop to last 15 days
+        df = df.tail(15)
+        
+        # Convert volume to int
+        df['volume'] = df['volume'].astype(int)
+
         config = {
             "type": "bar",
             "data": {
-                "labels": ["Hello world", "Test"],
-                "datasets": [{
-                    "label": "Foo",
-                    "data": [1, 2]
-                }]
+                "labels": df['datetime'].dt.strftime('%m/%d').tolist(),
+                "datasets": [
+                    {
+                        "label": "Volume",
+                        "data": df['volume'].tolist(),
+                        "backgroundColor": "rgba(244, 113, 33, 0.5)",
+                        "borderColor": "rgb(244, 113, 33)",
+                        "borderWidth": 1
+                    }
+                ]
+            },
+            "options": {
+                
+                }
             }
-        }
+        
 
         params = {
             'chart': json.dumps(config),
             'width': 500,
-            'height': 300,
-            'backgroundColor': 'white',
+            'height': 300
         }
+
         return f"https://quickchart.io/chart?{urlencode(params)}"
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
 
 # get user data from userDB
 @app.post("/get_user_data/")
@@ -486,16 +520,16 @@ def generate_run_graph(df: pd.DataFrame):
             "datasets": [
             {
                 "label": "Inclination",
-                "backgroundColor": "rgb(255, 99, 132)",
-                "borderColor": "rgb(255, 99, 132)",
+                "backgroundColor": "rgb(11, 128, 138)",
+                "borderColor": "rgb(11, 128, 138)",
                 "data": df['inclination'].tolist(),
                 "fill": 'false'
             },
             {
                 "label": "Speed",
                 "fill": 'false',
-                "backgroundColor": "rgb(54, 162, 235)",
-                "borderColor": "rgb(54, 162, 235)",
+                "backgroundColor": "rgb(244, 113, 33)",
+                "borderColor": "rgb(244, 113, 33)",
                 "data": df['speed'].tolist()
             }
             ]
@@ -551,7 +585,7 @@ def get_history_day_chart(username, date):
             short_url = data[0][6]
         cursor.close()
         conn.close()
-        return short_url
+        return short_url, date
     
     except Exception as e:
         print("error is in get_history_day_chart")
@@ -659,13 +693,13 @@ async def history(input_string: str):
     try:
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
         unique_dates = get_unique_dates(data_dict['userName'], data_dict['date'])
-        graph_url = get_history_day_chart(data_dict['userName'], data_dict['date'])
+        graph_url, slected_date = get_history_day_chart(data_dict['userName'], data_dict['date'])
         distance, volume, duration = get_run_stats(data_dict['userName'], data_dict['date'])
         duration = round(float(duration)/60, 2)
 
 
 
-        return {"unique_dates": unique_dates, "graph_url": graph_url, "volume": str(volume), "distance": str(f"{distance} kms"), "duration": str(f"{duration} mins"), "selected_date": str(data_dict['date'])}
+        return {"unique_dates": unique_dates, "graph_url": graph_url, "volume": str(volume), "distance": str(f"{distance} kms"), "duration": str(f"{duration} mins"), "selected_date": slected_date}
     except Exception as e:
         print("error is in history")
         print(e)
@@ -747,13 +781,12 @@ async def dashboard(input_string: str):
         quote = get_quote()
         days_into_goal, total_days = get_days_into_goal(data_dict['userName'])
         pie_chart_url = get_day_2_goal_chart(days_into_goal=days_into_goal, total_days=total_days)
-        bar_chart_url = get_month_overview_chart()
+        bar_chart_url = get_month_overview_chart(data_dict['userName'])
         best_run = get_best_run(data_dict['userName'])
         last_run = get_last_run(data_dict['userName'])
 
         # return data as json
         data = {"quote": quote, "pie_chart_url": pie_chart_url, "bar_chart_url": bar_chart_url, "best_run": best_run, "last_run": last_run}
-        print(data)
         return data
 
     except Exception as e:
