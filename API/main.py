@@ -364,6 +364,8 @@ async def get_month_overview_chart(username):
 async def get_user_data(input_string: str):
     try:
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        print("in get user data")
+        print(data_dict)
         # get user data from userDB for data_dict['userName']
         conn = psycopg2.connect(**db_params)
         cursor = conn.cursor()
@@ -1030,6 +1032,7 @@ async def generate_run(userName):
 async def run_now(input_string: str):
     try:
         data_dict = {pair.split(':')[0].strip(): pair.split(':')[1].strip() for pair in input_string.split(',')}
+        print(data_dict)
 
         generated_run = await generate_run(data_dict['userName'])
         df = generated_run['generated_time_series']
@@ -1040,11 +1043,13 @@ async def run_now(input_string: str):
 
         # calcualte run duration df['timestamp'].max() - df['timestamp'].min()
         run_duration = df['time'].max() - df['time'].min()
-        graph = generate_run_graph(df)
+        graph = await generate_run_graph(df)
         
         # drop timestamp column
         df = df.drop(columns=['time', 'runcount', 'speed_normalized'])
-        print(df.head())
+
+        # df keep only speed and inclination columns
+        df = df[['speed', 'inclination']]
 
         # multiply predicted_speed by 10 and round to 2 decimal places
         # df['predicted_speed'] = df['predicted_speed'] * 10
