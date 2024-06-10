@@ -2,6 +2,17 @@
 
 SmartStride is a project designed to predict and analyze running speeds and inclinations using LSTM (Long Short-Term Memory) neural networks. This project includes training models for speed and inclination predictions based on historical data, and generating future predictions.
 
+## Authors
+
+Credits 
+
+[Hirak Desai](https://www.github.com/hirak214)
+
+[Yashvi Agrawal](https://github.com/yashviagrawal)
+
+[Diya Hirani](https://github.com/DiyaHirani)
+
+
 ## Table of Contents
 
 - [Introduction](#introduction)
