@@ -1,0 +1,11 @@
+# Placeholder for 3D models and renders
+
+This directory will contain:
+- STL files for 3D printing the enclosure
+- CAD source files (Fusion 360, SolidWorks)
+- Rendered images of the 3D models
+- Assembly instructions and exploded views
+- Bill of Materials (BOM)
+
+3D files should be optimized for printing
+STL resolution: 0.1mm layer height compatible
