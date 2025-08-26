@@ -11,6 +11,8 @@
 > **AI-driven treadmill accessory that attaches to any treadmill, making it smart. Adapts to users' running patterns, personalizes workouts, and helps achieve fitness goals.**
 > 
 > 📄 **[Research Paper Available](docs/publications/SmartStride_Research_Paper.pdf)** - Academic publication documenting methodology, experiments, and results.
+> 
+> 🎬 **[Watch Live Demo](https://youtu.be/tk7CI5Cd5bA)** | 📱 **[Mobile App Demo](https://youtube.com/shorts/eYt0VS4Zsms)**
 
 ---
 
@@ -46,10 +48,12 @@ SmartStride transforms any regular treadmill into an intelligent fitness compani
 - **Bluetooth Connectivity** - seamless data transmission to mobile devices
 
 ### 📱 Mobile Integration
-- **Live Dashboard** - real-time workout metrics and AI recommendations
-- **Progress Tracking** - historical data analysis and performance insights
-- **Social Features** - share achievements and compete with friends
-- **Offline Capability** - works without internet connection
+- **✅ Live Dashboard** - Real-time workout metrics and AI recommendations
+- **✅ Progress Tracking** - Historical data analysis and performance insights
+- **✅ Bluetooth Connectivity** - Direct connection to SmartStride device
+- **✅ Data Visualization** - Real-time charts and progress indicators
+- **🚧 Social Features** - Share achievements and compete with friends (planned)
+- **✅ Offline Capability** - Works without internet connection
 
 ---
 
@@ -93,8 +97,17 @@ graph TB
 
 ## 🎬 Demo & Gallery
 
-### 📹 Demo Video
-[![SmartStride Demo](https://img.youtube.com/vi/placeholder/0.jpg)](https://youtube.com/watch?v=placeholder)
+### 📹 Demo Videos
+
+#### 🏃‍♂️ **Project Demo** - Complete SmartStride System
+[![SmartStride Project Demo](https://img.youtube.com/vi/tk7CI5Cd5bA/0.jpg)](https://youtu.be/tk7CI5Cd5bA)
+
+**Watch the full project demonstration** showing hardware setup, ESP32 operation, and complete system functionality.
+
+#### 📱 **Mobile App Demo** - MIT App Inventor App
+[![SmartStride Mobile App Demo](https://img.youtube.com/vi/eYt0VS4Zsms/0.jpg)](https://youtube.com/shorts/eYt0VS4Zsms)
+
+**Watch the mobile app demo** showcasing Bluetooth connectivity, real-time data display, and user interface.
 
 ### 🖼️ Product Gallery
 
@@ -231,6 +244,11 @@ This project is backed by rigorous academic research with peer-reviewed methodol
 - [🔬 Research Methodology](docs/research/methodology.md) - Detailed experimental design
 - [📋 Publications Overview](docs/publications/) - Citation information and abstracts
 
+### 🎬 **Live Demos**
+- **[🏃‍♂️ Project Demo](https://youtu.be/tk7CI5Cd5bA)** - Complete SmartStride system demonstration
+- **[📱 Mobile App Demo](https://youtube.com/shorts/eYt0VS4Zsms)** - MIT App Inventor app showcase
+- [🔬 Research Methodology](docs/research/methodology.md) - Detailed experimental design
+
 ### 🚀 Getting Started
 - [Installation Guide](docs/installation/getting-started.md) - Complete setup instructions
 - [System Architecture](docs/architecture/system-overview.md) - Technical overview
@@ -321,7 +339,7 @@ flutter run
 ## 🔮 Future Roadmap
 
 ### 🎯 Short Term (3-6 months)
-- [ ] **Mobile App Release** - Flutter-based cross-platform app
+- [✅] **Mobile App Release** - MIT App Inventor app completed and tested
 - [ ] **Advanced AI Models** - Transformer-based architectures
 - [ ] **Heart Rate Integration** - Bluetooth HRM support
 - [ ] **Voice Commands** - Hands-free workout control
@@ -342,7 +360,7 @@ Transform SmartStride into a comprehensive fitness ecosystem that makes personal
 We welcome contributions from the community! Whether you're interested in:
 - 🔬 **AI/ML Development** - Improving prediction models
 - 🔧 **Hardware Design** - Enhancing sensor accuracy
-- 📱 **Mobile Development** - Building the Flutter app
+- 📱 **Mobile Development** - MIT App Inventor app completed, future Flutter development
 - 📚 **Documentation** - Improving guides and tutorials
 
 See our [Contributing Guidelines](CONTRIBUTING.md) for details.

@@ -14,7 +14,13 @@ Visual content and media files for SmartStride project.
 - [ ] SmartStride device attached to treadmill
 - [ ] Close-up shots of hardware components
 - [ ] OLED display showing real-time data
-- [ ] Mobile app screenshots
+- [ ] Mobile app screenshots and interface
+
+### Mobile App Media
+- [ ] **App Screenshots** - Main interface and key features
+- [ ] **Development Process** - MIT App Inventor development environment
+- [ ] **User Experience** - App walkthrough and functionality demos
+- [ ] **Testing & Validation** - App running on different devices
 
 ### Technical Diagrams
 - [ ] System architecture overview
@@ -30,8 +36,10 @@ Visual content and media files for SmartStride project.
 ## 🎥 Video Content
 
 ### Demo Videos
-- [ ] SmartStride in action on treadmill
-- [ ] Mobile app walkthrough
+- [✅] **SmartStride in Action** - [Complete project demonstration](https://youtu.be/tk7CI5Cd5bA)
+- [✅] **Mobile App Walkthrough** - [MIT App Inventor app demo](https://youtube.com/shorts/eYt0VS4Zsms)
+- [✅] **Bluetooth Pairing Demo** - ESP32 device connection process
+- [✅] **Real-time Data Monitoring** - Live workout data display
 - [ ] Installation and setup guide
 - [ ] AI workout adaptation demonstration
 
