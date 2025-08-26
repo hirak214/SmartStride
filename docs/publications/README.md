@@ -4,7 +4,7 @@ This directory contains academic publications, research papers, and related mate
 
 ## 📚 Main Research Paper
 
-**📄 [Download Full Paper (PDF)](SmartStride_Research_Paper.pdf)** | **📊 [View Methodology](../research/methodology.md)**
+**📄 [Download Full Paper (PDF)](SmartStride_Research_Paper.pdf)** | **📊 [View Methodology](../research/methodology.md)** | **📖 [Read on Scribd](https://www.scribd.com/document/776188286/SmartStride-Research-Paper)**
 
 **Title**: *SmartStride: AI-Driven Personalized Treadmill Training System Using IoT Sensors and LSTM Neural Networks*
 
@@ -18,6 +18,12 @@ This paper presents SmartStride, a novel IoT-based system that transforms tradit
 **Keywords**: IoT, LSTM, Personalized Fitness, Treadmill Automation, Machine Learning, Wearable Technology
 
 **File**: [`SmartStride_Research_Paper.pdf`](SmartStride_Research_Paper.pdf) (1.0 MB)
+
+---
+
+## 📖 **Read Online (Scribd)**
+
+<iframe class="scribd_iframe_embed" title="SmartStride Research Paper" src="https://www.scribd.com/embeds/776188286/content?start_page=1&view_mode=scroll&access_key=key-IUUdCpR3Y9xFItnpv675" tabindex="0" data-auto-height="true" data-aspect-ratio="0.7729220222793488" scrolling="no" width="100%" height="600" frameborder="0" ></iframe> <p style="margin: 12px auto 6px auto; font-family: Helvetica,Arial,Sans-serif; font-size: 14px; line-height: normal; display: block;"> <a title="View SmartStride Research Paper on Scribd" href="https://www.scribd.com/document/776188286/SmartStride-Research-Paper#from_embed" style="color: #098642; text-decoration: underline;"> SmartStride Research Paper </a> by <a title="View someone's profile on Scribd" href="https://www.scribd.com/user/382055179/someone#from_embed" style="color: #098642; text-decoration: underline;" > someone </a> </p>
 
 ---
 

@@ -140,7 +140,7 @@ This project is backed by rigorous academic research with peer-reviewed methodol
 - **Model Development**: LSTM architecture with 14 engineered features
 - **Validation**: Cross-validation with 94% accuracy for speed prediction
 
-📋 **[Full Research Documentation](docs/research/)** | 📄 **[Download Paper (PDF)](docs/publications/SmartStride_Research_Paper.pdf)**
+📋 **[Full Research Documentation](docs/research/)** | 📄 **[Download Paper (PDF)](docs/publications/SmartStride_Research_Paper.pdf)** | 📖 **[Read on Scribd](https://www.scribd.com/document/776188286/SmartStride-Research-Paper)**
 
 ### 🎓 Academic Impact
 - **Reproducible Research**: All code, data, and methodologies are open-source
@@ -241,6 +241,7 @@ This project is backed by rigorous academic research with peer-reviewed methodol
 
 ### 📄 Research & Documentation
 - **[📄 Download Research Paper (PDF)](docs/publications/SmartStride_Research_Paper.pdf)** - Complete academic publication
+- **[📖 Read on Scribd](https://www.scribd.com/document/776188286/SmartStride-Research-Paper)** - Online reading platform
 - [🔬 Research Methodology](docs/research/methodology.md) - Detailed experimental design
 - [📋 Publications Overview](docs/publications/) - Citation information and abstracts
 
